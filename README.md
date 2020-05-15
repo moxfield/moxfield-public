@@ -1,6 +1,6 @@
 # Moxfield
 
-Moxfield is a social deck building application for Magic: the Gathering®. Try out our application at: https://www.moxfield.com/
+Moxfield is a deck building application for Magic: the Gathering®. Try it out at: https://www.moxfield.com/
 
 ## Disclaimers
 Wizards of the Coast, Magic: The Gathering, and their logos are trademarks of Wizards of 
