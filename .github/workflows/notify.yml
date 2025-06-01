@@ -8,12 +8,9 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Dump payload for debugging
-        run: echo "${{ toJson(github.event) }}"
-
       - name: Send Discord Notification via Embed
         if: >
-          (github.event.issue.issue_type == 'Bug') ||
+          (github.event.issue.type.name == 'Bug') ||
           (contains(join(github.event.issue.labels.*.name, ','), 'bug'))
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -25,7 +22,7 @@ jobs:
           BODY="$ISSUE_BODY"
           clean_body=""
           image_url=""
-          
+
           # Process the issue body line by line.
           while IFS= read -r line; do
             # If a line begins with "![" this is Markdown for an image.
@@ -39,12 +36,12 @@ jobs:
               clean_body+="$line"$'\n'
             fi
           done <<< "$BODY"
-          
+
           # Fallback: if clean_body ended up empty, use the full body.
           if [ -z "$clean_body" ]; then
             clean_body="$BODY"
           fi
-          
+
           # Build a JSON payload using jq.
           if [[ -n "$image_url" ]]; then
             json_payload=$(jq -n \
@@ -60,9 +57,9 @@ jobs:
               --arg body "$clean_body" \
               '{embeds: [{title: $title, url: $url, description: $body}]}')
           fi
-          
+
           echo "Payload: $json_payload"
-          
+
           curl -H "Content-Type: application/json" \
                -X POST \
                -d "$json_payload" \
