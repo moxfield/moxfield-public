@@ -1,0 +1,66 @@
+name: Notify Discord on New Bug Issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification via Embed
+        if: >
+          (github.event.issue.issue_type == 'Bug') ||
+          (contains(join(github.event.issue.labels.*.name, ','), 'bug'))
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        shell: bash
+        run: |
+          BODY="$ISSUE_BODY"
+          clean_body=""
+          image_url=""
+          
+          # Process the issue body line by line.
+          while IFS= read -r line; do
+            # If a line begins with "![" this is Markdown for an image.
+            if [[ "${line:0:2}" == "![" ]]; then
+              # Only set image_url if it hasn't already been set.
+              if [[ -z "$image_url" && "$line" == *"("* && "$line" == *")"* ]]; then
+                image_url="${line#*(}"
+                image_url="${image_url%%)*}"
+              fi
+            else
+              clean_body+="$line"$'\n'
+            fi
+          done <<< "$BODY"
+          
+          # Fallback: if clean_body ended up empty, use the full body.
+          if [ -z "$clean_body" ]; then
+            clean_body="$BODY"
+          fi
+          
+          # Build a JSON payload using jq.
+          if [[ -n "$image_url" ]]; then
+            json_payload=$(jq -n \
+              --arg title "$ISSUE_TITLE" \
+              --arg url "$ISSUE_URL" \
+              --arg body "$clean_body" \
+              --arg image "$image_url" \
+              '{embeds: [{title: $title, url: $url, description: $body, image: {url: $image}}]}')
+          else
+            json_payload=$(jq -n \
+              --arg title "$ISSUE_TITLE" \
+              --arg url "$ISSUE_URL" \
+              --arg body "$clean_body" \
+              '{embeds: [{title: $title, url: $url, description: $body}]}')
+          fi
+          
+          echo "Payload: $json_payload"
+          
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "$json_payload" \
+               "$DISCORD_WEBHOOK"
