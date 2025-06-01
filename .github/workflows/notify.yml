@@ -8,6 +8,9 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
+      - name: Dump payload for debugging
+        run: echo "${{ toJson(github.event) }}"
+
       - name: Send Discord Notification via Embed
         if: >
           (github.event.issue.issue_type == 'Bug') ||
